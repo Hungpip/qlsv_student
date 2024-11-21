@@ -107,7 +107,7 @@ class AddSinhVienAction implements Action {
 }
 
 class EditScoreAction implements Action {
-
+    //TODO: sửa cho tôi phần này không tìm thấy điểm
     @Override
     public void execute(Scanner scanner) {
         System.out.println("===Edit SinhVien's score===");
@@ -185,6 +185,7 @@ class PrintSinhVienListAction implements Action {
 
 class DeleteSinhVienAction implements Action {
     @Override
+    //TODO: sửa cho tôi phần này không tìm thấy sinh viên
     public void execute(Scanner scanner) {
         System.out.println("===Delete SinhVien===");
         String id = null;
@@ -229,6 +230,7 @@ class FindSinhVienByName implements Action {
 }
 
 class BBSortAction implements Action {
+    //TODO: BBS của tôi không chạy nưã :v
     private static <T extends Comparable<T>> void bubbleSort(T[] arr) {
         for (int i = 0; i < arr.length; i++) {
             for (int j = 0; j < arr.length - i - 1; j++) {
