@@ -1,15 +1,16 @@
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Optional;
+import java.util.Scanner;
 import java.util.regex.Pattern;
 
 enum Option {
-    New_SinhVien("1", "Insert new SinhVien", new InsertSinhVienAction()),
-    Print_SinhVien_List("2", "SinhVien list", new PrintSinhVienListAction()),
-    Delete_SinhVien("3", "Delete SinhVien", new DeleteSinhVienAction()),
-    Print_SinhVien_List_ByGrade("4", "SinhVien list (by grade from high to low)", new PrintSinhVienListAction(
-            (Comparator<SinhVien>) (o1, o2) -> Float.compare(o2.getGrade(), o1.getGrade())
-    )),
+    New_SinhVien("1", "Insert new SinhVien", new AddSinhVienAction()),
+    EditScoreAction("2", "Edit Score", new EditScoreAction()),
+    Print_SinhVien_List("3", "SinhVien list", new PrintSinhVienListAction()),
+    Delete_SinhVien("4", "Delete SinhVien", new DeleteSinhVienAction()),
     Find_SinhVien("5", "Find SinhViens", new FindSinhVienByName()),
-    Find_SinhVien_ByGrade("6", "Find SinhViens (by grade)", new FindSinhVienByGrade()),
+    BBSort("6", "Bubble Sort SinhVien", new BBSortAction()),
     Exit("0", "Exit", s -> {
         System.out.println("Exiting...");
         s.close();
@@ -32,7 +33,7 @@ interface Action {
 }
 
 public class LogicFlow {
-    public static final List<SinhVien> SinhVienList = new ArrayList<>();
+    public static LinkedList<Student> SinhVienList = new LinkedList<>();
 
     public LogicFlow() {
         startLogicFlow();
@@ -53,24 +54,23 @@ public class LogicFlow {
                 if (opt.isPresent()) {
                     opt.get().action.execute(scanner);
                 } else
-                    System.out.format("Invalid option: %s\n", input);
+                    System.out.format("Invalid option. Please re-enter : %s\n", input);
             }
         }
     }
 }
 
-class InsertSinhVienAction implements Action {
+class AddSinhVienAction implements Action {
 
     @Override
     public void execute(Scanner scanner) {
-        var emailPattern = Pattern.compile("^[\\w-.]+@([\\w-]+\\.)+[\\w-]{2,4}$");
-        var phonePattern = Pattern.compile("^0\\d{9}$");
-        System.out.println("===Insert new SinhVien===");
+        System.out.println("===Add new SinhVien===");
         String id = null;
         do {
-            System.out.print("ID: ");
+            var pattern = Pattern.compile("BH[0-9]{5}");
+            System.out.print("ID(e.g: BHxxxxx): ");
             var tmp = scanner.nextLine();
-            if (tmp.isBlank()) {
+            if (tmp.isBlank() || !pattern.matcher(tmp).matches()) {
                 System.out.println("Invalid ID.");
                 continue;
             }
@@ -78,82 +78,91 @@ class InsertSinhVienAction implements Action {
         } while (id == null);
         String name = null;
         do {
+            var pattern = Pattern.compile("[a-zA-Z\\s]+");
             System.out.print("Name: ");
             var tmp = scanner.nextLine();
-            if (tmp.isBlank()) {
+            if (tmp.isBlank() || !pattern.matcher(tmp).matches()) {
                 System.out.println("Invalid name.");
                 continue;
             }
             name = tmp;
         } while (name == null);
-        int age = -1;
+        double score = -1.0;
         do {
             try {
-                System.out.print("Age: ");
+                System.out.print("Score: ");
                 var str = scanner.nextLine().trim();
-                age = Integer.parseInt(str);
-                if (age < 0)
-                    System.out.println("Invalid age.");
+                score = Double.parseDouble(str);
+                if (score < 0 || score > 10) {
+                    System.out.println("Invalid score.");
+                    score = -1.0;
+                }
             } catch (Exception ignore) {
-                System.out.println("Invalid age.");
+                System.out.println("Invalid score.");
             }
-        } while (age < 0);
-        String email = null;
+        } while (score < 0);
+        var sv = Student.create(id, name, score);
+        LogicFlow.SinhVienList.add(sv);
+    }
+}
+
+class EditScoreAction implements Action {
+
+    @Override
+    public void execute(Scanner scanner) {
+        System.out.println("===Edit SinhVien's score===");
+        String id = null;
         do {
-            System.out.print("Email: ");
+            var pattern = Pattern.compile("BH[0-9]{5}");
+            System.out.print("ID(e.g: BHxxxxx): ");
             var tmp = scanner.nextLine();
-            if (tmp.isBlank() || !emailPattern.matcher(tmp).matches()) {
-                System.out.println("Invalid email.");
+            if (tmp.isBlank() || !pattern.matcher(tmp).matches()) {
+                System.out.println("Invalid ID.");
                 continue;
             }
-            email = tmp;
-        } while (email == null);
-        String phone = null;
-        do {
-            System.out.print("Phone: ");
-            var tmp = scanner.nextLine();
-            if (tmp.isBlank() || !phonePattern.matcher(tmp).matches()) {
-                System.out.println("Invalid phone.");
-                continue;
-            }
-            phone = tmp;
-        } while (phone == null);
-        String gender = "";
-        do {
-            System.out.print("Gender (Male, Female): ");
-            gender = scanner.nextLine();
-        } while (gender.isBlank());/* */
-        float grade = -1;
+            id = tmp;
+        } while (id == null);
+
+        double score = 0;
+        double finalScore = score;
+        Optional<Student> opt = Optional.ofNullable(LogicFlow.SinhVienList.search(s -> false));
+
+        if (opt.isEmpty()) {
+            System.out.println("SinhVien not found.");
+            return;
+        }
+
+        score = -1.0;
         do {
             try {
-                System.out.print("Grade: ");
-                var tmp = Float.parseFloat(scanner.nextLine());
-                grade = tmp;
-                if (grade < 0)
-                    System.out.println("Invalid grade.");
+                System.out.print("Score: ");
+                var str = scanner.nextLine().trim();
+                score = Double.parseDouble(str);
+                if (score < 0 || score > 10) {
+                    System.out.println("Invalid score.");
+                    score = -1.0;
+                }
             } catch (Exception ignore) {
-                System.out.println("Invalid grade.");
+                System.out.println("Invalid score.");
             }
-        } while (grade < 0);
-        var sv = new SinhVien();
-        sv.setId(id);
-        sv.setName(name);
-        sv.setAge(age);
-        sv.setEmail(email);
-        sv.setGender(gender);
-        sv.setGrade(grade);
+        } while (score < 0);
+
+        Student sv = opt.get();
+        sv = Student.create(sv.getId(), sv.getName(), score);
+        String finalId = id;
+        LogicFlow.SinhVienList.remove(student -> student.getId().equals(finalId));
         LogicFlow.SinhVienList.add(sv);
     }
 }
 
 class PrintSinhVienListAction implements Action {
-    private final Comparator<SinhVien> comparator;
+    private final Comparator<Student> comparator;
 
     public PrintSinhVienListAction() {
         this((o1, o2) -> 0);
     }
 
-    public PrintSinhVienListAction(Comparator<SinhVien> comparator) {
+    public PrintSinhVienListAction(Comparator<Student> comparator) {
         this.comparator = comparator;
     }
 
@@ -166,9 +175,8 @@ class PrintSinhVienListAction implements Action {
         } catch (Exception e) {
             System.err.println("Cannot get SinhVien list: " + e.getMessage());
         }
-        list.sort(comparator);
         for (int i = 0; i < list.size(); i++) {
-            System.out.printf("#%d: %s%n", i + 1, list.get(i));
+            System.out.printf("#%d: %s%n", i + 1, list.get(i).toString());
         }
         System.out.print("\n\nPress enter to continue...");
         scanner.nextLine();
@@ -208,38 +216,41 @@ class FindSinhVienByName implements Action {
         System.out.println("===SinhVien finder===");
         String filter;
         do {
-            System.out.print("Filter (ID or Name): ");
+            System.out.print("Filter (ID(BHxxxxx) or Name): ");
             filter = scanner.nextLine();
         } while (filter == null);
-        var list = new ArrayList<SinhVien>();
+        var list = LogicFlow.SinhVienList;
         String finalFilter = filter;
-        var filtered = list.stream().filter(it -> it.getName().startsWith(finalFilter) || it.getId().startsWith(finalFilter)).toList();
-        for (int i = 0; i < filtered.size(); i++) {
-            System.out.printf("#%d: %s%n", i + 1, filtered.get(i));
-        }
+        var st = list.search(it -> it.getName().startsWith(finalFilter) || it.getId().startsWith(finalFilter));
+        System.out.println("Found " + st);
         System.out.print("\n\nPress enter to continue...");
         scanner.nextLine();
     }
 }
 
-class FindSinhVienByGrade implements Action {
+class BBSortAction implements Action {
+    private static <T extends Comparable<T>> void bubbleSort(T[] arr) {
+        for (int i = 0; i < arr.length; i++) {
+            for (int j = 0; j < arr.length - i - 1; j++) {
+                if (arr[j].compareTo(arr[j + 1]) > 0) {
+                    T temp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = temp;
+                }
+            }
+        }
+    }
+
     @Override
     public void execute(Scanner scanner) {
-        System.out.println("===SinhVien finder===");
-        float filter = -1f;
-        do {
-            System.out.print("SinhVien have grade >= ");
-            try {
-                filter = Float.parseFloat(scanner.nextLine());
-            } catch (Exception ignore) {
-                System.out.println("Invalid grade.");
-            }
-        } while (filter < 0);
-        var list = new ArrayList<SinhVien>();
-        for (int i = 0; i < list.size(); i++) {
-            System.out.printf("#%d: %s%n", i + 1, list.get(i));
+        System.out.println("===Bubble Sort SinhVien by Age===");
+        if (LogicFlow.SinhVienList.size == 0) {
+            System.out.println("No SinhVien to sort.");
+            return;
         }
-        System.out.print("\n\nPress enter to continue...");
-        scanner.nextLine();
+        Student[] sinhVienArray = LogicFlow.SinhVienList.toArray();
+        bubbleSort(sinhVienArray);
+        LogicFlow.SinhVienList = new LinkedList<>();
+        System.out.println("SinhVien list sorted by age.");
     }
 }
